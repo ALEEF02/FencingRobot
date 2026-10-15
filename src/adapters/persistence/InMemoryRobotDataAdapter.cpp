@@ -7,14 +7,16 @@ InMemoryRobotDataAdapter::InMemoryRobotDataAdapter() {
     for (const auto& [id, name] : {
             std::pair{"cut_3", "Cut 3"}, {"cut_4", "Cut 4"},
             {"cut_5", "Cut 5"}, {"parry_3", "Parry 3"},
-            {"parry_4", "Parry 4"}, {"parry_5", "Parry 5"}}) {
+            {"parry_4", "Parry 4"}, {"parry_5", "Parry 5"},
+            {"en_garde", "En Garde"}}) {
         movements_.emplace(id, domain::MovementDefinition{
             .id = id, .display_name = name, .built_in = true});
     }
     domain::Drill demo{.id = "sample", .name = "Sample drill (simulation)"};
-    demo.steps.push_back({"cut_3", std::nullopt});
-    demo.steps.push_back({"parry_5", domain::AxialProfile{0.2, 0.1}});
-    demo.steps.push_back({"cut_4", std::nullopt});
+    demo.motion_steps.push_back({"cut_3", 0});
+    demo.motion_steps.push_back({"parry_5", 5});
+    demo.motion_steps.push_back({"en_garde", 6});
+    demo.motion_steps.push_back({"cut_4", 10});
     drills_.emplace(demo.id, demo);
 }
 std::vector<domain::Drill> InMemoryRobotDataAdapter::listDrills() const {

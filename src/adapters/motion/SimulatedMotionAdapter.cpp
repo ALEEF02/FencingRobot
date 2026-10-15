@@ -9,7 +9,17 @@ bool SimulatedMotionAdapter::start(const domain::MotionPlan& plan) {
     elapsed_before_pause_ = {};
     return true;
 }
-domain::ExecutionState SimulatedMotionAdapter::poll() {
+domain::ExecutionState SimulatedMotionAdapter::pollMotion() {
+    if (state_ != domain::ExecutionState::Running || paused_)
+        return state_;
+    // Deliberately artificial 40ms movement duration for demo/tests.
+    if (elapsed_before_pause_ + (std::chrono::steady_clock::now() - began_)
+        >= std::chrono::milliseconds(40)) {
+        state_ = domain::ExecutionState::Succeeded;
+    }
+    return state_;
+}
+domain::ExecutionState SimulatedMotionAdapter::pollPositioning() {
     if (state_ != domain::ExecutionState::Running || paused_)
         return state_;
     // Deliberately artificial 40ms movement duration for demo/tests.

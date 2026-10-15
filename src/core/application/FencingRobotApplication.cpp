@@ -1,5 +1,4 @@
 #include "core/application/FencingRobotApplication.hpp"
-#include <algorithm>
 #include <cmath>
 #include <utility>
 
@@ -25,14 +24,44 @@ std::vector<domain::Drill> FencingRobotApplication::listDrills() const {
 }
 
 bool FencingRobotApplication::saveDrill(const domain::Drill& drill) {
-	if (drill.id.empty() || drill.name.empty() || drill.steps.empty())
-		return reject("Drill needs an id, name, and at least one step");
-	for (const auto& step : drill.steps) {
+	if (drill.id.empty() || drill.name.empty() || drill.motion_steps.empty())
+		return reject("Drill needs an id, name, and at least one motion step");
+
+	for (std::size_t i = 0; i < drill.motion_steps.size(); ++i) {
+		const auto& step = drill.motion_steps[i];
 		if (!data_.findMovement(step.movement_id)) return reject("Unknown movement: " + step.movement_id);
-		if (step.axial && (!std::isfinite(step.axial->speed_mps) ||
-			!std::isfinite(step.axial->duration_seconds) || step.axial->duration_seconds <= 0))
-			return reject("Invalid axial profile");
+		const auto& movement = data_.findMovement(step.movement_id);
+		if (!std::isfinite(step.start_time_seconds) || !std::isfinite(movement->duration_seconds) ||
+		movement->duration_seconds <= 0)
+			return reject("Invalid motion step timing");
+		const double start = step.start_time_seconds;
+		const double end = start + movement->duration_seconds;
+		for (std::size_t j = 0; j < i; ++j) {
+			const auto& other = drill.motion_steps[j];
+			const auto& otherMovement = data_.findMovement(step.movement_id);
+			const double other_end = other.start_time_seconds + otherMovement->duration_seconds;
+			if (start < other_end && other.start_time_seconds < end)
+				return reject("Motion steps cannot overlap");
+		}
 	}
+
+	for (std::size_t i = 0; i < drill.positioning_steps.size(); ++i) {
+		const auto& step = drill.positioning_steps[i];
+		if (!std::isfinite(step.speed_mps))
+			return reject("Invalid positioning speed");
+		if (!std::isfinite(step.start_time_seconds) || !std::isfinite(step.duration_seconds) ||
+			step.duration_seconds <= 0)
+			return reject("Invalid positioning step timing");
+		const double start = step.start_time_seconds;
+		const double end = start + step.duration_seconds;
+		for (std::size_t j = 0; j < i; ++j) {
+			const auto& other = drill.positioning_steps[j];
+			const double other_end = other.start_time_seconds + other.duration_seconds;
+			if (start < other_end && other.start_time_seconds < end)
+				return reject("Positioning steps cannot overlap");
+		}
+	}
+
 	if (!data_.saveDrill(drill)) return reject("Unable to store drill");
 	last_error_.clear();
 	return true;
@@ -51,7 +80,7 @@ bool FencingRobotApplication::startDrill(const std::string& id) {
 	// TODO(reqSystemDrillRequiredEnergy): replace DEMO-ONLY estimate with a
 	// measured and conservative energy + peak-power model before live use.
 	// THIS SHOULD PROBABLY COME FROM A PORT/ADAPTER!
-	const double demo_estimated_joules = static_cast<double>(drill->steps.size()) * 10.0;
+	const double demo_estimated_joules = static_cast<double>(drill->motion_steps.size()) * 10.0;
 	if (power.available_energy_joules < demo_estimated_joules)
 		return reject("Insufficient simulated energy");
 	if (!orchestrator_.start(*drill, config_.handedness, data_))

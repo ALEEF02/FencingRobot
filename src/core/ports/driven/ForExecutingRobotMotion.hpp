@@ -7,7 +7,10 @@ public:
     virtual ~ForExecutingRobotMotion() = default;
     // Nonblocking start. poll() reports progression; implementation owns timing.
     virtual bool start(const domain::MotionPlan& plan) = 0;
-    virtual domain::ExecutionState poll() = 0;
+    virtual bool start(const domain::PositioningStep& step) = 0;
+    virtual domain::ExecutionState pollMotion() = 0;
+    virtual domain::ExecutionState pollPositioning() = 0;
+    // These are each for both Motion and Positioning simultaneously
     virtual bool pause() = 0;
     virtual bool resume() = 0;
     virtual bool cancel() = 0;

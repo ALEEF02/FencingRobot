@@ -34,30 +34,31 @@ struct MovementDefinition {
     std::string display_name;
     std::vector<std::string> joint_names;
     std::vector<JointWaypoint> waypoints;
+    double duration_seconds;
     bool built_in{false};
 };
 
-struct AxialProfile {
-    // For the initial outline only: constant axial speed for a duration.
+struct PositioningStep {
+    double start_time_seconds{};
     double speed_mps{};
     double duration_seconds{};
 };
 
-struct DrillStep {
+struct MotionStep {
     std::string movement_id;
-    std::optional<AxialProfile> axial;
+    double start_time_seconds{};
 };
 
 struct Drill {
     std::string id;
     std::string name;
-    std::vector<DrillStep> steps;
+    std::vector<MotionStep> motion_steps;
+    std::vector<PositioningStep> positioning_steps;
 };
 
 struct MotionPlan {
     MovementDefinition blade_movement;
     Handedness handedness{Handedness::Unknown};
-    std::optional<AxialProfile> axial;
 };
 
 struct RobotConfiguration {

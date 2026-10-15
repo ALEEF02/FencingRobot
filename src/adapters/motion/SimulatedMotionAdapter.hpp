@@ -9,7 +9,8 @@ namespace fencing::adapters {
 class SimulatedMotionAdapter final : public ports::driven::ForExecutingRobotMotion {
 public:
     bool start(const domain::MotionPlan& plan) override;
-    domain::ExecutionState poll() override;
+    domain::ExecutionState pollMotion() override;
+    domain::ExecutionState pollPositioning() override;
     bool pause() override;
     bool resume() override;
     bool cancel() override;
