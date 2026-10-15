@@ -30,7 +30,7 @@ int main() {
     CHECK(app.calibrateRobot());
     CHECK(app.startDrill("sample"));
     CHECK(app.drillState() == domain::DrillState::Running);
-    CHECK(!app.requestManualAxialSpeed(0.1) && "Manual overrides blocked during drill");
+    CHECK(!app.requestManualAxialMovement(0.1) && "Manual overrides blocked during drill");
 
     for (int i = 0; i < 300 && app.drillState() == domain::DrillState::Running; ++i) {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -41,7 +41,7 @@ int main() {
     const std::vector<std::string> expected{
         "cut_3", "en_guard", "parry_5", "en_guard", "cut_4", "en_guard", "lower_blade"};
     CHECK(motion.startedMovements() == expected);
-    CHECK(app.requestIdleRotation(360.0));
+    CHECK(app.requestManualRotation(360.0));
     CHECK(!app.saveMovement({.id="user_move", .display_name="Custom"}));
 
     CHECK(app.restartDrill());

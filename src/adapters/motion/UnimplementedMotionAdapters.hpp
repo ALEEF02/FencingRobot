@@ -12,8 +12,8 @@ public:
     bool pause() override { return false; }
     bool resume() override { return false; }
     bool cancel() override { return false; }
-    bool commandManualAxialSpeed(double) override { return false; }
-    bool rotateWhileIdle(double) override { return false; }
+    bool commandManualAxialMovement(double) override { return false; }
+    bool commandManualRotation(double) override { return false; }
 };
 
 // TODO: implement ROS 2 adapter (rclcpp actions/services/controllers).
@@ -25,7 +25,7 @@ public:
     bool pause() override { return false; }
     bool resume() override { return false; }
     bool cancel() override { return false; }
-    bool commandManualAxialSpeed(double) override { return false; }
-    bool rotateWhileIdle(double) override { return false; }
+    bool commandManualAxialMovement(double) override { return false; }
+    bool commandManualRotation(double) override { return false; }
 };
 } // namespace fencing::adapters

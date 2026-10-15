@@ -22,7 +22,8 @@ bool FencingRobotApplication::reject(std::string reason) {
 
 std::vector<domain::Drill> FencingRobotApplication::listDrills() const {
 	return data_.listDrills();
-}	
+}
+
 bool FencingRobotApplication::saveDrill(const domain::Drill& drill) {
 	if (drill.id.empty() || drill.name.empty() || drill.steps.empty())
 		return reject("Drill needs an id, name, and at least one step");
@@ -36,6 +37,7 @@ bool FencingRobotApplication::saveDrill(const domain::Drill& drill) {
 	last_error_.clear();
 	return true;
 }
+
 bool FencingRobotApplication::startDrill(const std::string& id) {
 	if (drillState() == domain::DrillState::EmergencyStopped)
 		return reject("Emergency stop latched; reset procedure not implemented");
@@ -48,6 +50,7 @@ bool FencingRobotApplication::startDrill(const std::string& id) {
 	if (!power.valid) return reject("Power status unavailable");
 	// TODO(reqSystemDrillRequiredEnergy): replace DEMO-ONLY estimate with a
 	// measured and conservative energy + peak-power model before live use.
+	// THIS SHOULD PROBABLY COME FROM A PORT/ADAPTER!
 	const double demo_estimated_joules = static_cast<double>(drill->steps.size()) * 10.0;
 	if (power.available_energy_joules < demo_estimated_joules)
 		return reject("Insufficient simulated energy");
@@ -57,20 +60,26 @@ bool FencingRobotApplication::startDrill(const std::string& id) {
 	last_error_.clear();
 	return true;
 }
+
 bool FencingRobotApplication::cancelDrill() {
 	return orchestrator_.cancel();
 }
+
 domain::DrillState FencingRobotApplication::drillState() const {
 	return orchestrator_.state();
 }
+
 bool FencingRobotApplication::pauseDrill() { return orchestrator_.pause(); }
+
 bool FencingRobotApplication::resumeDrill() { return orchestrator_.resume(); }
+
 bool FencingRobotApplication::restartDrill() {
 	if (last_drill_id_.empty()) return reject("No previous drill");
 	if (drillState() == domain::DrillState::Running || drillState() == domain::DrillState::Paused)
 		if (!orchestrator_.cancel()) return false;
 	return startDrill(last_drill_id_);
 }
+
 bool FencingRobotApplication::isIdleForManualControl() const {
 	switch (drillState()) {
 		case domain::DrillState::Idle:
@@ -80,16 +89,19 @@ bool FencingRobotApplication::isIdleForManualControl() const {
 		default: return false;
 	}
 }
-bool FencingRobotApplication::requestManualAxialSpeed(double speed_mps) {
+
+bool FencingRobotApplication::requestManualAxialMovement(double distance_m) {
 	if (!isIdleForManualControl()) return reject("Manual base control requires idle state");
-	if (!std::isfinite(speed_mps)) return reject("Invalid speed");
+	if (!std::isfinite(distance_m)) return reject("Invalid distance");
 	// TODO: validated speed/stability limits and dead-man timeout are required.
-	return motion_.commandManualAxialSpeed(speed_mps);
+	return motion_.commandManualAxialMovement(distance_m);
 }
-bool FencingRobotApplication::requestIdleRotation(double degrees) {
+
+bool FencingRobotApplication::requestManualRotation(double degrees) {
 	if (!isIdleForManualControl()) return reject("Rotation requires idle state");
-	return std::isfinite(degrees) && motion_.rotateWhileIdle(degrees);
+	return std::isfinite(degrees) && motion_.commandManualRotation(degrees);
 }
+
 void FencingRobotApplication::requestEmergencyStop() {
 	// Demonstrates domain latching only. NEVER rely on this for real E-stop.
 	orchestrator_.latchEmergencyStop();

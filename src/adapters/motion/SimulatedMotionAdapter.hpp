@@ -13,8 +13,8 @@ public:
     bool pause() override;
     bool resume() override;
     bool cancel() override;
-    bool commandManualAxialSpeed(double) override { return true; }
-    bool rotateWhileIdle(double) override { return true; }
+    bool commandManualAxialMovement(double) override { return true; }
+    bool commandManualRotation(double) override { return true; }
     const std::vector<std::string>& startedMovements() const { return started_; }
 private:
     domain::ExecutionState state_{domain::ExecutionState::Idle};

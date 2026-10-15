@@ -11,7 +11,7 @@ public:
     virtual bool pause() = 0;
     virtual bool resume() = 0;
     virtual bool cancel() = 0;
-    virtual bool commandManualAxialSpeed(double speed_mps) = 0;
-    virtual bool rotateWhileIdle(double degrees) = 0;
+    virtual bool commandManualAxialMovement(double distance_m) = 0;
+    virtual bool commandManualRotation(double degrees) = 0;
 };
 } // namespace fencing::ports::driven

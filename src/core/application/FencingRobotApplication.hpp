@@ -42,8 +42,8 @@ class FencingRobotApplication final :
             bool pauseDrill() override;
             bool resumeDrill() override;
             bool restartDrill() override;
-            bool requestManualAxialSpeed(double speed_mps) override;
-            bool requestIdleRotation(double degrees) override;
+            bool requestManualAxialMovement(double distance_m) override;
+            bool requestManualRotation(double degrees) override;
             void requestEmergencyStop() override;
 
             // ForConfiguringRobot

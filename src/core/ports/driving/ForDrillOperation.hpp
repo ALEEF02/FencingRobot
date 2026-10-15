@@ -11,8 +11,8 @@ public:
     virtual bool pauseDrill() = 0;
     virtual bool resumeDrill() = 0;
     virtual bool restartDrill() = 0;
-    virtual bool requestManualAxialSpeed(double speed_mps) = 0;
-    virtual bool requestIdleRotation(double degrees) = 0;
+    virtual bool requestManualAxialMovement(double distance_m) = 0;
+    virtual bool requestManualRotation(double degrees) = 0;
     virtual void requestEmergencyStop() = 0;
 };
 } // namespace fencing::ports::driving
