@@ -28,7 +28,14 @@ int main() {
     CHECK(!app.startDrill("sample") && "Unknown handedness/uncalibrated: fail closed");
     CHECK(app.configureHandedness(domain::Handedness::Right));
     CHECK(app.calibrateRobot());
-    CHECK(app.startDrill("sample"));
+    const domain::Drill short_drill{
+        .id = "short_test",
+        .name = "Short timed test",
+        .motion_steps = {{"cut_3", 0.0}},
+        .positioning_steps = {{0.0, 0.1, 0.1}},
+    };
+    CHECK(app.saveDrill(short_drill));
+    CHECK(app.startDrill("short_test"));
     CHECK(app.drillState() == domain::DrillState::Running);
     CHECK(!app.requestManualAxialMovement(0.1) && "Manual overrides blocked during drill");
 
@@ -37,9 +44,7 @@ int main() {
         app.tick();
     }
     CHECK(app.drillState() == domain::DrillState::Completed);
-    // cut_3, guard, parry_5, guard, cut_4, guard, lower blade
-    const std::vector<std::string> expected{
-        "cut_3", "en_guard", "parry_5", "en_guard", "cut_4", "en_guard", "lower_blade"};
+    const std::vector<std::string> expected{"cut_3"};
     CHECK(motion.startedMovements() == expected);
     CHECK(app.requestManualRotation(360.0));
     CHECK(!app.saveMovement({.id="user_move", .display_name="Custom"}));

@@ -23,6 +23,10 @@ std::vector<domain::Drill> FencingRobotApplication::listDrills() const {
 	return data_.listDrills();
 }
 
+std::vector<domain::MovementDefinition> FencingRobotApplication::listMovements() const {
+	return data_.listMovements();
+}
+
 bool FencingRobotApplication::saveDrill(const domain::Drill& drill) {
 	if (drill.id.empty() || drill.name.empty() || drill.motion_steps.empty())
 		return reject("Drill needs an id, name, and at least one motion step");

@@ -33,6 +33,7 @@ class FencingRobotApplication final :
 
             // ForManagingDrills
             std::vector<domain::Drill> listDrills() const override;
+            std::vector<domain::MovementDefinition> listMovements() const override;
             bool saveDrill(const domain::Drill& drill) override;
 
             // ForDrillOperation

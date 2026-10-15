@@ -10,6 +10,7 @@ public:
     std::vector<domain::Drill> listDrills() const override;
     std::optional<domain::Drill> findDrill(const std::string& id) const override;
     bool saveDrill(const domain::Drill& drill) override;
+    std::vector<domain::MovementDefinition> listMovements() const override;
     std::optional<domain::MovementDefinition> findMovement(const std::string& id) const override;
     bool saveMovement(const domain::MovementDefinition& movement) override;
     domain::RobotConfiguration loadConfiguration() const override;

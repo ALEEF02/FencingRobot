@@ -5,16 +5,25 @@ namespace fencing::adapters {
 InMemoryRobotDataAdapter::InMemoryRobotDataAdapter() {
     // Names ONLY. There are NO weapon trajectories here yet.
     for (const auto& [id, name] : {
-            std::pair{"cut_3", "Cut 3"}, {"cut_4", "Cut 4"},
-            {"cut_5", "Cut 5"}, {"parry_3", "Parry 3"},
-            {"parry_4", "Parry 4"}, {"parry_5", "Parry 5"},
-            {"en_garde", "En Garde"}}) {
+            std::pair{"parry_3", "Parry 3"},
+            {"parry_4", "Parry 4"}, {"parry_5", "Parry 5"}}) {
         movements_.emplace(id, domain::MovementDefinition{
-            .id = id, .display_name = name, .built_in = true});
+            .id = id, .display_name = name, .duration_seconds = 3.0,
+            .built_in = true});
     }
+    for (const auto& [id, name] : {
+            std::pair{"cut_3", "Cut 3"}, {"cut_4", "Cut 4"},
+            {"cut_5", "Cut 5"}}) {
+        movements_.emplace(id, domain::MovementDefinition{
+            .id = id, .display_name = name, .duration_seconds = 1.5,
+            .built_in = true});
+    }
+    movements_.emplace("en_garde", domain::MovementDefinition{
+        .id = "en_garde", .display_name = "En Garde", .duration_seconds = 1.0,
+        .built_in = true});
     domain::Drill demo{.id = "sample", .name = "Sample drill (simulation)"};
     demo.motion_steps.push_back({"cut_3", 0});
-    demo.motion_steps.push_back({"parry_5", 5});
+    demo.motion_steps.push_back({"parry_5", 1.5});
     demo.motion_steps.push_back({"en_garde", 6});
     demo.motion_steps.push_back({"cut_4", 10});
     drills_.emplace(demo.id, demo);
@@ -34,6 +43,15 @@ std::optional<domain::Drill> InMemoryRobotDataAdapter::findDrill(const std::stri
 bool InMemoryRobotDataAdapter::saveDrill(const domain::Drill& drill) {
     drills_[drill.id] = drill;
     return true;
+}
+std::vector<domain::MovementDefinition> InMemoryRobotDataAdapter::listMovements() const {
+    std::vector<domain::MovementDefinition> result;
+    result.reserve(movements_.size());
+    for (const auto& [id, movement] : movements_) result.push_back(movement);
+    std::sort(result.begin(), result.end(), [](const auto& a, const auto& b) {
+        return a.display_name < b.display_name;
+    });
+    return result;
 }
 std::optional<domain::MovementDefinition> InMemoryRobotDataAdapter::findMovement(const std::string& id) const {
     if (const auto it = movements_.find(id); it != movements_.end()) return it->second;

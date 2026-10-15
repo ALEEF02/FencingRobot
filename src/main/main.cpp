@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
         *motion, calibration, data, power, health, safe_power);
 
     fencing::ui::MainWindow window(core, core, core, core, backend);
-    window.show();
+    window.showMaximized();
     QTimer timer;
     QObject::connect(&timer, &QTimer::timeout, [&core] { core.tick(); });
     timer.start(25); // UI-process polling; not a motor-control clock.
