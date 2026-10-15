@@ -1,0 +1,16 @@
+/build/
+/build-*/
+/cmake-build-*/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.user
+*.o
+*.a
+*.so
+*.swp
+__pycache__/
+*.pyc
+*.db
+.vscode/

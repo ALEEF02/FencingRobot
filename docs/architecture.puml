@@ -1,0 +1,248 @@
+@startuml
+' Fencing Robot - UML Component Diagram
+' Hexagonal Architecture / Ports & Adapters
+' Port notation follows PlantUML component-diagram portin / portout / port syntax.
+
+left to right direction
+skinparam componentStyle uml2
+skinparam packageStyle rectangle
+skinparam shadowing false
+'skinparam linetype ortho
+skinparam linetype polyline
+skinparam defaultTextAlignment center
+skinparam wrapWidth 220
+skinparam maxMessageSize 90
+skinparam dpi 80
+
+title Fencing Robot — Hexagonal (Ports & Adapters) Component Architecture
+
+' ============================================================================
+' DRIVING SIDE: external actors and technology-specific adapters
+' ============================================================================
+package "Driving Side\n(outside the application)" as DrivingSide {
+    actor "Fencer / Coach" as User
+
+    component "On-board User Interface\n<<driving adapter>>" as OnboardUI
+    component "Handheld Remote" as Remote
+    component "Remote Input Adapter\n<<driving adapter>>" as RemoteAdapter
+
+    component "Manual Keyframe Authoring\n<<driving adapter>>\n[Could]" as KeyframeAdapter
+    component "Teleoperation Recording\n<<driving adapter>>\n[Could]" as TeleopAdapter
+
+    component "Application Test Harness\n<<driving test actor>>" as TestHarness
+
+    User --> OnboardUI : drill / maintenance use
+    User --> Remote : remote commands
+    Remote --> RemoteAdapter : radio / wireless input
+}
+
+' ============================================================================
+' APPLICATION / HEXAGON
+' Ports are owned by the application and use domain language only.
+' ============================================================================
+component "Fencing Robot Application\n<<technology-agnostic application>>" as App {
+    ' -----------------------------
+    ' Driving ports (provided API)
+    ' -----------------------------
+    portin "For Managing Drills" as pManageDrills
+    portin "For Remote Operation" as pRemoteOperation
+    portin "For Configuring the Robot" as pConfigureRobot
+    portin "For Monitoring the Robot" as pMonitorRobot
+    portin "For Authoring Movements\n[Could]" as pAuthorMovements
+
+    ' -----------------------------
+    ' Driven ports (required SPI)
+    ' -----------------------------
+    portout "For Executing Robot Motion" as pExecuteMotion
+    portout "For Calibrating Motion Hardware" as pCalibrateMotion
+    portout "For Persisting Robot Data" as pPersistData
+    portout "For Reading Power State" as pReadPower
+    portout "For Reading Hardware Health" as pReadHealth
+    portout "For Entering Safe Power State" as pSafePower
+
+    ' -----------------------------
+    ' Internal application components
+    ' -----------------------------
+    component "Drill Manager" as DrillManager
+    component "Motion Orchestrator" as MotionOrchestrator
+    component "Movement Library &\nTransition Rules" as MovementLibrary
+    component "Movement Authoring &\nValidation" as MovementAuthoring
+    component "Safety & Readiness\nCoordinator" as SafetyCoordinator
+    component "Energy Estimator" as EnergyEstimator
+    component "Maintenance &\nConfiguration" as Maintenance
+
+    ' Driving-port routing
+    pManageDrills --> DrillManager
+    pRemoteOperation --> DrillManager
+    pConfigureRobot --> Maintenance : configure handedness\ncalibrate robot
+    pMonitorRobot --> Maintenance : check robot status
+    pAuthorMovements --> MovementAuthoring
+
+    ' Internal collaboration
+    DrillManager --> MotionOrchestrator : execute / pause / resume / restart
+    MotionOrchestrator --> MovementLibrary : resolve movement + en-garde transition
+    MotionOrchestrator --> SafetyCoordinator : authorize execution
+    SafetyCoordinator --> EnergyEstimator : verify required energy
+    Maintenance --> SafetyCoordinator : readiness / handedness / faults
+    MovementAuthoring --> MovementLibrary : validate + register movement
+
+    ' Driven-port routing
+    MotionOrchestrator --> pExecuteMotion
+    Maintenance --> pCalibrateMotion
+    DrillManager --> pPersistData : drills
+    MovementLibrary --> pPersistData : movements / transitions
+    Maintenance --> pPersistData : calibration / configuration
+    SafetyCoordinator --> pReadPower
+    EnergyEstimator --> pReadPower
+    Maintenance --> pReadHealth
+    SafetyCoordinator --> pSafePower : emergency / shutdown sequence
+}
+
+note top of App
+The application contains fencing-domain policy only.
+Its ports MUST NOT expose ROS 2 message/action types,
+LeRobot tensors/policy objects, database APIs, or hardware protocols.
+end note
+
+note bottom of App
+Examples of application-domain motion concepts:
+MovementId, Handedness, MotionPlan, AxialProfile,
+MovementTiming, MotionResult, CalibrationRequest.
+
+The exact domain model remains an implementation decision.
+end note
+
+' ============================================================================
+' DRIVING ADAPTERS -> DRIVING PORTS
+' ============================================================================
+OnboardUI --> pManageDrills
+OnboardUI --> pConfigureRobot
+OnboardUI --> pMonitorRobot
+OnboardUI --> pAuthorMovements
+RemoteAdapter --> pRemoteOperation
+KeyframeAdapter --> pAuthorMovements
+TeleopAdapter --> pAuthorMovements
+
+TestHarness ..> pManageDrills : tests
+TestHarness ..> pRemoteOperation : tests
+TestHarness ..> pConfigureRobot : tests
+TestHarness ..> pMonitorRobot : tests
+TestHarness ..> pAuthorMovements : tests
+
+' ============================================================================
+' ALTERNATIVE MOTION BACKENDS
+' Exactly one production implementation is wired to the motion ports.
+' ============================================================================
+package "Alternative Motion Backends\n(outside the application)" as MotionBackends {
+    component "ROS 2 Motion Adapter\n<<driven adapter>>" as ROS2Adapter
+    component "ROS 2 Stack\nros2_control + controllers\n(optional MoveIt 2)" as ROS2Stack
+
+    component "LeRobot Motion Adapter\n<<driven adapter>>" as LeRobotAdapter
+    component "LeRobot Stack\nrobot / policy execution" as LeRobotStack
+
+    ROS2Adapter --> ROS2Stack : translate domain contract
+    LeRobotAdapter --> LeRobotStack : translate domain contract
+}
+
+pExecuteMotion --> ROS2Adapter : production profile A
+pCalibrateMotion --> ROS2Adapter
+pExecuteMotion --> LeRobotAdapter : production profile B
+pCalibrateMotion --> LeRobotAdapter
+
+' ============================================================================
+' OTHER DRIVEN ADAPTERS AND EXTERNAL ACTORS
+' ============================================================================
+package "Other Driven Adapters\n(outside the application)" as DrivenAdapters {
+    component "Robot Data Adapter\n<<driven adapter>>" as DataAdapter
+    component "Power-State Adapter\n<<driven adapter>>" as PowerAdapter
+    component "Hardware-Health Adapter\n<<driven adapter>>" as HealthAdapter
+    component "Safe-Power Adapter\n<<driven adapter>>" as SafePowerAdapter
+}
+
+pPersistData --> DataAdapter
+pReadPower --> PowerAdapter
+pReadHealth --> HealthAdapter
+pSafePower --> SafePowerAdapter
+
+package "Robot Platform / External Technology" as Platform {
+    component "Arm + Saber + Mobile Base\nActuators" as MotionHardware
+
+    component "Local Data Store\ndrills / movements / calibration" as DataStore
+    component "Motor / Wiring Diagnostics" as Diagnostics
+
+    component "Power Subsystem" as PowerSubsystem {
+        port "Charging Interface" as pCharge
+        component "Battery / BMS" as Battery
+        component "Power / Shutdown Controller" as PowerController
+        'component "Charging / Full-Charge Indicator" as ChargeIndicator
+
+        pCharge --> Battery : charge energy
+        'Battery --> ChargeIndicator : charge state
+        PowerController --> Battery : power distribution
+    }
+
+    component "On-board Analog\nPower Switch" as AnalogSwitch
+    component "Strikeable Torso Target" as TorsoTarget
+
+    AnalogSwitch --> PowerController : physical on / off
+}
+
+ROS2Stack --> MotionHardware
+LeRobotStack --> MotionHardware
+DataAdapter --> DataStore
+PowerAdapter --> Battery
+HealthAdapter --> Diagnostics
+SafePowerAdapter --> PowerController
+
+component "External Charger" as Charger
+Charger --> pCharge
+User --> TorsoTarget : fencing contact
+
+' ============================================================================
+' TEST DOUBLES: one may be supplied at every driven port
+' ============================================================================
+package "Isolated Application Tests" as TestSide {
+    component "Motion Test Double" as MotionDouble <<test double>>
+    component "Calibration Test Double" as CalibrationDouble <<test double>>
+    component "Persistence Test Double" as PersistenceDouble <<test double>>
+    component "Power Test Double" as PowerDouble <<test double>>
+    component "Health Test Double" as HealthDouble <<test double>>
+    component "Safe-Power Test Double" as SafePowerDouble <<test double>>
+}
+
+pExecuteMotion ..> MotionDouble : test wiring
+pCalibrateMotion ..> CalibrationDouble
+pPersistData ..> PersistenceDouble
+pReadPower ..> PowerDouble
+pReadHealth ..> HealthDouble
+pSafePower ..> SafePowerDouble
+
+' ============================================================================
+' CONFIGURATOR / COMPOSITION ROOT
+' Outside the Ports & Adapters pattern proper; responsible for runtime wiring.
+' ============================================================================
+component "Configurator / Composition Root\n<<startup wiring>>" as Configurator
+
+Configurator ..> App : construct application
+Configurator ..> ROS2Adapter : ROS 2 profile
+Configurator ..> LeRobotAdapter : LeRobot profile
+Configurator ..> DataAdapter
+Configurator ..> PowerAdapter
+Configurator ..> HealthAdapter
+Configurator ..> SafePowerAdapter
+
+note bottom of Configurator
+Production startup selects exactly one motion-backend profile.
+The Fencing Robot Application and its port contracts do not change.
+Tests replace any driven adapter with a test double.
+end note
+
+legend bottom
+|= PlantUML notation |= Architectural meaning |
+| portin | Driving port: application-provided service used by a driving actor |
+| portout | Driven port: application-required service supplied by a driven actor/adapter |
+| port | Direction-neutral component boundary port (used here for the physical charging connector) |
+| <<driving adapter>> | Translates an external input technology into the application's domain contract |
+| <<driven adapter>> | Translates the application's domain contract into an external technology contract |
+endlegend
+@enduml
