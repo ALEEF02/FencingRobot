@@ -1,40 +1,87 @@
-# Fencing Robot — C++20 / Qt 6 Starter
+# Fencing Robot
 
-**Starter skeleton, not a working fencing robot.** The only functional motion implementation is a simulated adapter that NEVER operates motors. LeRobot and ROS 2 are **non-actuating TODO adapters**.
-
-This repository is designed for you to fill in. It models Cockburn's **Ports & Adapters** boundary from the project's component diagram, and leaves you plenty of implementation work.
+Remote-controlled fencing dummy with preset & custom drills.
 
 ## Quick start on a Raspberry Pi 5 (64-bit Raspberry Pi OS)
 
 ```bash
 sudo apt update
-sudo apt install -y build-essential cmake ninja-build qt6-base-dev
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
-cmake --build build
+sudo apt install -y build-essential cmake ninja-build qt6-base-dev libsqlite3-dev python3
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ./build/fencing_robot_ui --backend=sim
 ```
-
-Use 64-bit Raspberry Pi OS with a Qt 6 Widgets development package. Qt 6 availability and exact package names depend on the OS release. Python is only needed later for LeRobot integration; it is not needed to build this demo.
+Python is only required for the bridge tests and LeRobot backend.
 
 If Qt is not installed, CMake skips the UI but still builds the core/tests:
-
 ```bash
 cmake -S . -B build -DFENCING_BUILD_UI=OFF
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-## Try the simulated UI
+### Run the UI on a PI through SSH
+```bash
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+export WAYLAND_DISPLAY=wayland-0
+export QT_QPA_PLATFORM=wayland
+export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
+
+./build/fencing_robot_ui --backend=sim
+```
+
+### Try the simulated UI
 
 1. Open **Configuration**, choose Left or Right, click **Apply handedness**.
 2. Click **Simulate calibration** (a fake calibration; there is no hardware).
 3. Open **Drills**, select a saved drill and click **Start**.
-4. The simulator advances a named blade movement, interposed `en_guard`, and a final `lower_blade`. It has no joint trajectory data or physical behavior.
-5. Build and save a new named list of movements; persistence is **in memory only**.
+4. The simulator advances the scheduled blade and positioning timelines. It has no joint trajectory data or physical behavior.
+5. Build and save a new named list of movements. The normal application stores drills, movements, and configuration in SQLite.
 6. See **Monitoring** for deliberately fake power/health status.
 
-For completeness, `--backend=lerobot` and `--backend=ros2` select named adapters **that refuse all commands**. Neither mode connects to a robot.
+The default database is `fencing_robot.sqlite3` under Qt's per-user application-data directory. Pass `--database=/path/to/file.sqlite3` to choose an explicit location. A new database is seeded once with the seven built-in movements and sample drill; reopening it does not replace user data.
+
+## LeRobot backend
+
+Install `uv` and prepare the local `lerobot-fencing` environment first. Copy `build/bridges/lerobot_bridge.example.json` to a writable location, then update:
+- robot.arm.id
+- both arm serial paths
+- RoboClaw serial path
+- left_motor, m1_sign, and m2_sign if non-default
+- counts_per_metre
+- drive.max_speed
+- all movement aliases
+
+### Start in dry-run mode
+Dry-run is the default: it loads the real LeRobot configuration and saved motions, validates commands and timing, but does not connect to hardware.
+
+```bash
+./build/fencing_robot_ui \
+  --backend=lerobot \
+  --lerobot-root=/path/to/lerobot-fencing \
+  --lerobot-config=/path/to/lerobot_bridge.json
+```
+
+### Run with hardware
+Calibrate the arm separately with the LeRobot tooling before enabling hardware. The bridge never starts an interactive calibration; it checks that calibration already exists and connects with `calibrate=False`. Only after dry-run validation, add the explicit hardware flag:
+
+```bash
+./build/fencing_robot_ui \
+  --backend=lerobot \
+  --lerobot-root=/path/to/lerobot-fencing \
+  --lerobot-config=/path/to/lerobot_bridge.json \
+  --enable-hardware
+```
+
+This will
+- Open the RoboClaw and stop the wheels.
+- Connect both arm buses with calibrate=False.
+- Read the current arm position.
+- Set that position as the initial goal.
+- Enable arm torque.
+
+Use `--bridge-script=/path/to/lerobot_bridge.py` only when overriding the copy beside the executable. Manual axial movement is supported; manual rotation deliberately returns `false` until the chassis geometry is known. See [the implemented protocol](docs/MOTION_BRIDGE_PROTOCOL.md) for bridge messages and failure behavior.
 
 ## Structure
 
@@ -46,37 +93,40 @@ src/
     ports/driven/                 # 6 required interfaces
     application/                  # orchestration and business rules
   adapters/                       # technology-specific / fake implementations
-    motion/                       # simulated, LeRobot TODO, ROS 2 TODO
-    persistence/                  # memory-only adapter, SQLite TODO
+    motion/                       # simulated, LeRobot process, ROS 2 placeholder
+    persistence/                  # SQLite plus in-memory test adapter
     calibration/, power/, health/, safety/
   ui/MainWindow.*                 # Qt Widgets driving adapter
   main/main.cpp                   # composition root: chooses adapter
-bridges/                           # illustrative Python wire-protocol stub
+bridges/                           # LeRobot Python bridge and example config
 
 docs/
   architecture.puml               # updated PlantUML with split maintenance ports
   ARCHITECTURE.md                 # ports, runtime boundaries, IPC
   REQUIREMENTS_TRACEABILITY.md    # how requirements map to starter components
   LEARNING_PATH.md                # suggested implementation sequence
-  MOTION_BRIDGE_PROTOCOL.md       # proposed future LeRobot IPC contract
-tests/CoreTests.cpp               # dependency-injected, no-hardware smoke tests
+  MOTION_BRIDGE_PROTOCOL.md       # implemented LeRobot IPC contract
+tests/                             # core, SQLite, adapter, and bridge tests
 ```
 
 ## Main design decisions
 
-- **Language:** C++20 in the domain, ports, Qt UI, and adapter stubs. LeRobot itself remains a separate **Python** process to be integrated later.
+- **Language:** C++20 in the domain, ports, Qt UI, and adapters. LeRobot remains a separate **Python** child process.
 - **Qt style:** Qt Widgets for a compact onboard touchscreen. No QML needed for this starter.
-- **Process boundary:** UI and core are **in one C++ process** initially because the Qt UI can call driving interfaces directly; separate the GUI later if operational constraints warrant it. LeRobot must run outside the UI process.
+- **Process boundary:** UI and core are in one C++ process. The LeRobot adapter owns a long-running Python child and communicates over newline-delimited JSON on standard input/output.
 - **Swap point:** `ForExecutingRobotMotion` is domain-owned. The composition root chooses `SimulatedMotionAdapter`, `LeRobotMotionAdapter`, or `ROS2MotionAdapter`.
 - **No fake safety assurance:** emergency stop, power model, torque/contact limits, mechanical handedness sensing, charge management, and driver watchdogs are **not implemented**.
-- **Not every diagram box is a separate class yet:** splitting or combining internal classes is intentionally left to you. Ports and the application's boundary are the stable part.
 
-## Safety-critical warning
-
-Do **not** connect this scaffold to live motors. The demonstration's fake health/power/calibration adapters report invented values, and `10 joules/step` is an intentionally meaningless demo placeholder. It is NOT a valid energy estimate or acceptance test.
-
-The project requirements currently specify an emergency-stop sequence that moves to en garde, lowers the blade, and shuts down. Whether moving the blade during an emergency is safe **must be resolved** by an appropriate safety analysis. A safety-rated, independently effective stop/torque-disable mechanism must not depend on Qt, Python, the Linux scheduler, or this application. A normal controlled cancellation/recovery is a distinct use case and is only marked TODO here.
-
-## Next steps
-
-Follow [LEARNING_PATH.md](docs/LEARNING_PATH.md), beginning with the core tests. Implement a real (validated) persistence adapter, then a hardware communication boundary, then safety and control verification. The optional movement-authoring feature is deliberately deferred.
+## TODO
+- [ ] The health, power, and software safe-power adapters still report simulated values, and `10 joules/step` is an intentionally meaningless demo placeholder.
+- [ ] The project requirements currently specify an emergency-stop sequence that moves to en garde, lowers the blade, and shuts down. Whether moving the blade during an emergency is safe **must be resolved** by an appropriate safety analysis. A safety-rated, independently effective stop/torque-disable mechanism must not depend on Qt, Python, the Linux scheduler, or this application. A normal controlled cancellation/recovery is a distinct use case and is only marked TODO here.
+- [ ] The LeRobot integration has automated fake-device and dry bridge tests, but no automated test enables hardware. Validate wheel polarity, encoder scaling, joint limits, saved movements, timeout behavior, and physical stopping independently before any live use.
+- [ ] The GUI calibration action does not calibrate LeRobot hardware.
+- [ ] The bridge checks for a calibration file but does not interactively verify calibration against the motors during startup.
+- [ ] The five-second Python startup timeout may be too short on a Pi.
+- [ ] Pause/resume in the current MotionOrchestrator only forwards to the backend while an arm motion is active. Avoid pausing during a positioning-only interval until this is corrected.
+- [ ] The software emergency stop is not safety-rated.
+- [ ] Manual rotation is unavailable.
+- [ ] There is no automatic bridge reconnection.
+- [ ] There is no collision avoidance, chassis odometry, contact-force limiting, or independently verified stopping system.
+- [ ] A SIGKILL, USB disconnect, or Linux failure can bypass orderly cleanup; the RoboClaw serial timeout and physical power stop remain necessary.

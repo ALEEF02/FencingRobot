@@ -1,0 +1,43 @@
+{
+  "robot": {
+    "id": "fencer",
+    "arm": {
+      "id": "fencing_arm_01",
+      "port_1": "/dev/serial/by-id/replace-with-arm-bus-1",
+      "port_2": "/dev/serial/by-id/replace-with-arm-bus-2",
+      "max_relative_target": 5.0
+    },
+    "drive": {
+      "port": "/dev/serial/by-id/replace-with-roboclaw",
+      "max_speed": 500,
+      "command_timeout_s": 0.5
+    }
+  },
+  "control_hz": 40.0,
+  "counts_per_metre": 1998.0,
+  "manual_speed_mps": 0.1,
+  "manual_tolerance_counts": 10,
+  "manual_timeout_margin_s": 5.0,
+  "arm_tolerance": 2.0,
+  "arm_settle_timeout_s": 2.0,
+  "movement_aliases": {
+    "right": {
+      "cut_3": "cut3",
+      "cut_4": "cut4",
+      "cut_5": "cut5",
+      "parry_3": "parry3",
+      "parry_4": "parry4",
+      "parry_5": "parry5",
+      "en_garde": "enguard"
+    },
+    "left": {
+      "cut_3": "cut3_left",
+      "cut_4": "cut4_left",
+      "cut_5": "cut5_left",
+      "parry_3": "parry3_left",
+      "parry_4": "parry4_left",
+      "parry_5": "parry5_left",
+      "en_garde": "enguard_left"
+    }
+  }
+}

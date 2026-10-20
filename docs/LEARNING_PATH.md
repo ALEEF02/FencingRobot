@@ -1,11 +1,11 @@
-# Suggested implementation path (you do most of the work)
+# Suggested implementation path
 
-Each item is intentionally left as a manageable milestone.
+The SQLite and LeRobot transport milestones now have reference implementations in this repository. The remaining items are intentionally manageable follow-on milestones.
 
 1. **Get comfortable with ports and tests.** Read the C++ driving/driven interfaces. Run `ctest`. Add a test that a zero-energy `ForReadingPowerState` fake prevents drilling. Add one for incorrect handedness. Avoid touching the Qt UI while doing this.
 2. **Learn Qt Widgets.** In `MainWindow.cpp`, support removing/reordering a drill step, editing a saved drill, and displaying better feedback/progress. Then make it fit your actual touchscreen dimensions. Don't put movement validation into the UI.
-3. **Persist domain data.** Replace `InMemoryRobotDataAdapter` with a SQLite adapter implementing exactly `ForPersistingRobotData`. Store drills, handedness, movement version, and per-joint calibration values. Migration/versioning and replay-after-reboot tests are essential.
-4. **Build the motion transport.** Write a C++ implementation of `LeRobotMotionAdapter` that invokes an out-of-process Python service. Implement a fake server first, then contract tests, THEN add actual LeRobot APIs. Ensure operations never block the Qt event loop. Provide a backend timeout and a heartbeat.
+3. **Study and extend persistence.** Read `SqliteRobotDataAdapter` and its replacement/rollback tests. Add a version-2 migration when the domain needs new stored fields; keep the in-memory adapter for focused core tests.
+4. **Study and harden the motion transport.** Trace one command through `LeRobotMotionAdapter`, the JSON-lines protocol, and `lerobot_bridge.py`. Before deployment, test child-process and hardware failures on the target computer and add any required watchdog supervision outside the UI process.
 5. **Document the motion model.** Add real keyframes for the six cuts/parries, guard and blade-lowering, and define physically valid starting/ending states. Test simultaneous axial/base and blade timing. Add a reliable failure/abort path.
 6. **Design and verify safety.** Define safe contact-force/energy/impulse limits, emergency stopping state, speed limits, sensor fault handling, power gating, and the reset protocol. Build an **independent hardware safety path**; never rely only on C++/Qt/Linux/Python.
 7. **Remote controller.** Create a driving adapter that reads the handheld remote and invokes `ForDrillOperation`. Test response latency at 6m and reject manual motion in incompatible states. Keep the physical E-stop path separate.

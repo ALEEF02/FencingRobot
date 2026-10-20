@@ -25,18 +25,18 @@ The requirement to split `For Maintaining the Robot` has been applied:
 
 | Interface | Role | Starter adapter |
 |---|---|---|
-| `ForExecutingRobotMotion` | Start, poll, pause, resume, cancel, axial, rotation | `SimulatedMotionAdapter`, unimplemented ROS 2/LeRobot |
+| `ForExecutingRobotMotion` | Start, poll, pause, resume, cancel, axial, rotation | Simulated, LeRobot process; ROS 2 placeholder |
 | `ForCalibratingMotionHardware` | Hardware calibration | Simulated/unimplemented |
-| `ForPersistingRobotData` | Drills, movements, configuration | In-memory; replace with SQLite |
+| `ForPersistingRobotData` | Drills, movements, configuration | SQLite in the application; in-memory in isolated tests |
 | `ForReadingPowerState` | Power and charge telemetry | Fake |
 | `ForReadingHardwareHealth` | Hardware faults | Fake |
 | `ForEnteringSafePowerState` | Software request to safety/power subsystem | Fake; NOT an E-stop |
 
 ## Threading and responsiveness
 
-The current Qt window and business logic share a process. The UI invokes the driving interfaces synchronously because the simulated backend performs no blocking work. `MotionOrchestrator` advances via `tick()`; **the Qt timer is not used for generating motor control commands**. A real adapter should send commands asynchronously, return quickly, and report status separately.
+The current Qt window and business logic share a process. `MotionOrchestrator` advances via `tick()`; **the Qt timer is not used for generating motor control commands**. The LeRobot adapter queues short JSON requests and polls cached states. Its Python child owns the independent 40 Hz hardware loop.
 
-A future LeRobot adapter will require an IPC client (e.g. a local Unix-domain socket with JSON messages or protobuf) and a Python subprocess supervised by systemd. Do **not** block the Qt thread waiting for long LeRobot calls. When you integrate it, consider moving the application to its own process or using a worker plus thread-safe event/command dispatch.
+`LeRobotMotionAdapter` owns its child through `QProcess` and uses newline-delimited JSON over standard input/output. Startup is bounded by a readiness timeout; normal calls do not wait for motion completion. Malformed output, heartbeat loss, and child-process exit fail active work. See [MOTION_BRIDGE_PROTOCOL.md](MOTION_BRIDGE_PROTOCOL.md).
 
 ## The architecture cannot make systems interchangeable by itself
 
