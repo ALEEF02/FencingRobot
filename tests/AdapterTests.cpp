@@ -31,9 +31,15 @@ int main() {
 
     {
         adapters::SqliteRobotDataAdapter data(database_path);
-        CHECK(data.listMovements().size() == 7);
-        const auto sample = data.findDrill("sample");
-        CHECK(sample && sample->motion_steps.size() == 4);
+        CHECK(data.listMovements().empty());
+        CHECK(!data.findDrill("sample"));
+
+        CHECK(data.saveMovement({
+            .id = "cut_3",
+            .display_name = "Cut 3",
+            .duration_seconds = 1.5,
+            .built_in = true,
+        }));
 
         domain::MovementDefinition movement{
             .id = "custom_move",
@@ -92,7 +98,7 @@ int main() {
         const auto configuration = reopened.loadConfiguration();
         CHECK(configuration.handedness == domain::Handedness::Left);
         CHECK(configuration.calibrated);
-        CHECK(reopened.listMovements().size() == 8);
+        CHECK(reopened.listMovements().size() == 2);
     }
 
     const auto future_path = directory / "future.sqlite3";

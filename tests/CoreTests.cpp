@@ -23,7 +23,11 @@ int main() {
     adapters::DemoPowerAdapter power;
     adapters::DemoHealthAdapter health;
     adapters::DemoSafePowerAdapter safe;
+    CHECK(data.listMovements().empty());
+    CHECK(!data.findDrill("sample"));
     application::FencingRobotApplication app(motion, calibration, data, power, health, safe);
+    CHECK(app.listMovements().size() == 7);
+    CHECK(data.findDrill("sample")->motion_steps.size() == 4);
 
     CHECK(!app.startDrill("sample") && "Unknown handedness/uncalibrated: fail closed");
     CHECK(app.configureHandedness(domain::Handedness::Right));

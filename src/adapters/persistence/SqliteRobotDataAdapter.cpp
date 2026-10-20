@@ -221,20 +221,6 @@ void SqliteRobotDataAdapter::initialize() {
         );
 
         INSERT INTO robot_configuration VALUES (1, 0, 0);
-        INSERT INTO movements VALUES
-            ('parry_3', 'Parry 3', 3.0, 1),
-            ('parry_4', 'Parry 4', 3.0, 1),
-            ('parry_5', 'Parry 5', 3.0, 1),
-            ('cut_3', 'Cut 3', 1.5, 1),
-            ('cut_4', 'Cut 4', 1.5, 1),
-            ('cut_5', 'Cut 5', 1.5, 1),
-            ('en_garde', 'En Garde', 1.0, 1);
-        INSERT INTO drills VALUES ('sample', 'Sample drill');
-        INSERT INTO motion_steps VALUES
-            ('sample', 0, 'cut_3', 0.0),
-            ('sample', 1, 'parry_5', 1.5),
-            ('sample', 2, 'en_garde', 6.0),
-            ('sample', 3, 'cut_4', 10.0);
         PRAGMA user_version = 1;
         COMMIT;
     )sql");

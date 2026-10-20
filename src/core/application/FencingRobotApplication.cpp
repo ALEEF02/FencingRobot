@@ -1,8 +1,57 @@
 #include "core/application/FencingRobotApplication.hpp"
+#include <array>
 #include <cmath>
+#include <stdexcept>
 #include <utility>
 
 namespace fencing::application {
+namespace {
+
+const std::array<domain::MovementDefinition, 7>& initialMovementLibrary() {
+	static const std::array<domain::MovementDefinition, 7> movements{{
+		{.id = "parry_3", .display_name = "Parry 3", .duration_seconds = 3.0,
+		 .built_in = true},
+		{.id = "parry_4", .display_name = "Parry 4", .duration_seconds = 3.0,
+		 .built_in = true},
+		{.id = "parry_5", .display_name = "Parry 5", .duration_seconds = 3.0,
+		 .built_in = true},
+		{.id = "cut_3", .display_name = "Cut 3", .duration_seconds = 1.5,
+		 .built_in = true},
+		{.id = "cut_4", .display_name = "Cut 4", .duration_seconds = 1.5,
+		 .built_in = true},
+		{.id = "cut_5", .display_name = "Cut 5", .duration_seconds = 1.5,
+		 .built_in = true},
+		{.id = "en_garde", .display_name = "En Garde", .duration_seconds = 1.0,
+		 .built_in = true},
+	}};
+	return movements;
+}
+
+void seedInitialData(ports::driven::ForPersistingRobotData& data) {
+	for (const auto& movement : initialMovementLibrary()) {
+		// Persistence adapters store the library; they do not decide its contents.
+		if (!data.findMovement(movement.id) && !data.saveMovement(movement))
+			throw std::runtime_error("Unable to store initial movement: " + movement.id);
+	}
+
+	if (!data.findDrill("sample")) {
+		const domain::Drill sample{
+			.id = "sample",
+			.name = "Sample drill",
+			.motion_steps = {
+				{"cut_3", 0.0},
+				{"parry_5", 1.5},
+				{"en_garde", 6.0},
+				{"cut_4", 10.0},
+			},
+		};
+		if (!data.saveDrill(sample))
+			throw std::runtime_error("Unable to store the initial sample drill");
+	}
+}
+
+} // namespace
+
 FencingRobotApplication::FencingRobotApplication(
 	ports::driven::ForExecutingRobotMotion& motion,
 	ports::driven::ForCalibratingMotionHardware& calibration,
@@ -12,7 +61,9 @@ FencingRobotApplication::FencingRobotApplication(
 	ports::driven::ForEnteringSafePowerState& safe_power)
 	: motion_(motion), calibration_(calibration), data_(data), power_(power),
 	  health_(health), safe_power_(safe_power), orchestrator_(motion),
-	  config_(data.loadConfiguration()) {}
+	  config_(data.loadConfiguration()) {
+	seedInitialData(data_);
+}
 
 bool FencingRobotApplication::reject(std::string reason) {
 	last_error_ = std::move(reason);

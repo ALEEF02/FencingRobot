@@ -2,32 +2,7 @@
 #include <algorithm>
 
 namespace fencing::adapters {
-InMemoryRobotDataAdapter::InMemoryRobotDataAdapter() {
-    // Names ONLY. There are NO weapon trajectories here yet.
-    for (const auto& [id, name] : {
-            std::pair{"parry_3", "Parry 3"},
-            {"parry_4", "Parry 4"}, {"parry_5", "Parry 5"}}) {
-        movements_.emplace(id, domain::MovementDefinition{
-            .id = id, .display_name = name, .duration_seconds = 3.0,
-            .built_in = true});
-    }
-    for (const auto& [id, name] : {
-            std::pair{"cut_3", "Cut 3"}, {"cut_4", "Cut 4"},
-            {"cut_5", "Cut 5"}}) {
-        movements_.emplace(id, domain::MovementDefinition{
-            .id = id, .display_name = name, .duration_seconds = 1.5,
-            .built_in = true});
-    }
-    movements_.emplace("en_garde", domain::MovementDefinition{
-        .id = "en_garde", .display_name = "En Garde", .duration_seconds = 1.0,
-        .built_in = true});
-    domain::Drill demo{.id = "sample", .name = "Sample drill (simulation)"};
-    demo.motion_steps.push_back({"cut_3", 0});
-    demo.motion_steps.push_back({"parry_5", 1.5});
-    demo.motion_steps.push_back({"en_garde", 6});
-    demo.motion_steps.push_back({"cut_4", 10});
-    drills_.emplace(demo.id, demo);
-}
+InMemoryRobotDataAdapter::InMemoryRobotDataAdapter() = default;
 std::vector<domain::Drill> InMemoryRobotDataAdapter::listDrills() const {
     std::vector<domain::Drill> result;
     for (const auto& [id, drill] : drills_) result.push_back(drill);
