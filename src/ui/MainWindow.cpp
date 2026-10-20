@@ -889,6 +889,7 @@ MainWindow::MainWindow(ports::driving::ForManagingDrills& drills,
     connect(load_button, &QPushButton::clicked, this, [this] { loadSelectedDrill(); });
     connect(save_button, &QPushButton::clicked, this, [this] { saveDrill(); });
     connect(start_button, &QPushButton::clicked, this, [this] {
+        // TODO: Check for unsaved drill changes
         if (saved_drills_->currentIndex() < 0 ||
             !control_.startDrill(saved_drills_->currentData().toString().toStdString())) {
             showFailure("Start drill");

@@ -74,6 +74,20 @@ Calibrate the arm separately with the LeRobot tooling before enabling hardware. 
   --enable-hardware
 ```
 
+```bash
+export LEROBOT_ROOT="$HOME/lerobot-fencing"
+export FENCING_ROOT="$HOME/FencingRobot"
+export ROBOT_DATABASE="$HOME/.local/share/fencing-robot/fencing_robot.sqlite3"
+export BRIDGE_CONFIG="$HOME/.config/fencing-robot/lerobot_bridge.json"
+"$FENCING_ROOT/build/fencing_robot_ui" \
+  --backend=lerobot \
+  --database="$ROBOT_DATABASE" \
+  --lerobot-root="$LEROBOT_ROOT" \
+  --lerobot-config="$BRIDGE_CONFIG" \
+  --bridge-script="$FENCING_ROOT/build/bridges/lerobot_bridge.py"
+```
+add `--enable-hardware` when ready.
+
 This will
 - Open the RoboClaw and stop the wheels.
 - Connect both arm buses with calibrate=False.
@@ -130,3 +144,5 @@ tests/                             # core, SQLite, adapter, and bridge tests
 - [ ] There is no automatic bridge reconnection.
 - [ ] There is no collision avoidance, chassis odometry, contact-force limiting, or independently verified stopping system.
 - [ ] A SIGKILL, USB disconnect, or Linux failure can bypass orderly cleanup; the RoboClaw serial timeout and physical power stop remain necessary.
+- [ ] When closing, we must safely dampen the joints instead of simply releasing control (Likely a new method in ForExecutingRobotMotion or ForEnteringSafePowerState)
+- [ ] There is potential for a ForExecutingRobotMotion implementation to not support yet all of the required motions. Determine how we should handle this.
